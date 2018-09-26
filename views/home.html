@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>Air quality</title>
+    <link rel="stylesheet" href="../css/bootstrap-solarized-dark.css">
+    <link rel="stylesheet" href="../css/leaflet.css">
+    <script src='../js/vue.js'></script>
+    <script src='../js/leaflet.js'></script>
+    <style>
+      #map-id {
+        width: 100%;
+        height: 500px;
+      }
+    </style>
+  </head>
+  <body class='container'>
+    <div id='app'>
+        <div class='pull-right' style='padding: 10px'>
+          <select v-model='parameter' v-on:change='onParameterChange'
+                  class='form-control btn-info input-sm'>
+            <option v-for='p in parameters'>{{ p }}</option>
+          </select>
+        </div>
+      <h3>Last measurements:<h4 v-if='lang && lang.en'><span v-html='lang.en.parameters[parameter][0].name'></span></h4></h3>
+    </div>
+    <div id='map-id'></div>
+    <script src='../js/home.js'></script>
+  </body>
+</html>
