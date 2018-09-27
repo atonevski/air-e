@@ -9,6 +9,12 @@
       th.center { text-align: center; }
       th.left { text-align: left; }
       th.right { text-align: right; }
+      .good { color: green; }
+      .moderate { color: lightgreen; }
+      .sensitive { color: orange; }
+      .unhealthy { color: red; }
+      .very-unhealthy { color: darkred; }
+      .hazardous { color: violet; }
     </style>
   </head>
   <body>
@@ -71,8 +77,10 @@
               <td>{{ t }}</td>
               <td v-for='si in measurements.stations.length'
                   align='right'>
+                  <span v-bind:class='[paramLevel(parameter, measurements.measurements[si-1].data[i])]'>
                 {{ measurements.measurements[si-1].data[i] ? 
                     measurements.measurements[si-1].data[i].toFixed(2) : null }}
+                  </span>
               </td>
             </tr>
           </tbody>
