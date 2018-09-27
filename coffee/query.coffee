@@ -7,6 +7,79 @@ http = require 'http'
 
 URL = "http://air.moepp.gov.mk/graphs/site/pages/MakeGraph.php"
 
+levels =
+  CO:
+    good:            [ 0,   1]
+    moderate:        [ 1,   2]
+    sensitive:       [ 2,   9]
+    unhealthy:       [ 9,  17]
+    veryUnhealthy:  [17,  34]
+    hazardous:       [34, 100]
+
+  NO2:
+    good:            [  0,   40]
+    moderate:        [ 40,   80]
+    sensitive:       [ 80,  180]
+    unhealthy:       [180,  280]
+    veryUnhealthy:  [280,  400]
+    hazardous:       [400, 1000]
+
+  O3:
+    good:            [  0,   50]
+    moderate:        [ 50,  100]
+    sensitive:       [100,  168]
+    unhealthy:       [168,  208]
+    veryUnhealthy:  [208,  748]
+    hazardous:       [748, 2000]
+
+  PM10:
+    good:            [  0,   50]
+    moderate:        [ 50,  100]
+    sensitive:       [100,  250]
+    unhealthy:       [250,  350]
+    veryUnhealthy:  [350,  430]
+    hazardous:       [430, 2000]
+
+  PM10D:
+    good:            [  0,   50]
+    moderate:        [ 50,  100]
+    sensitive:       [100,  250]
+    unhealthy:       [250,  350]
+    veryUnhealthy:  [350,  430]
+    hazardous:       [430, 2000]
+
+  PM25:
+    good:            [  0,   30]
+    moderate:        [ 30,   60]
+    sensitive:       [ 60,   90]
+    unhealthy:       [ 90,  120]
+    veryUnhealthy:  [120,  250]
+    hazardous:       [250, 2000]
+
+  SO2:
+    good:            [   0,   40]
+    moderate:        [  40,   80]
+    sensitive:       [  80,  380]
+    unhealthy:       [ 380,  800]
+    veryUnhealthy:  [ 800, 1600]
+    hazardous:       [1600, 5000]
+
+paramLevel = (p, v) -> # parameter, value
+  switch
+    when levels[p].good[0] <= v < levels[p].good[1]
+      'good'
+    when levels[p].moderate[0] <= v < levels[p].moderate[1]
+      'moderate'
+    when levels[p].sensitive[0] <= v < levels[p].sensitive[1]
+      'sensitive'
+    when levels[p].unhealthy[0] <= v < levels[p].unhealthy[1]
+      'unhealthy'
+    when levels[p].veryUnhealthy[0] <= v < levels[p].veryUnhealthy[1]
+      'veryUnhealthy'
+    when levels[p].hazardous[0] <= v < levels[p].hazardous[1]
+      'hazardous'
+    else
+      'unknown'
 
 #     params = {
 #       "station"   => station,
