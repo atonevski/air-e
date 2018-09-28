@@ -9,6 +9,7 @@ url       = require 'url'
 # be closed automatically when the JavaScript object is garbage collected.
 win = null
 icon = nativeImage.createFromPath path.join __dirname, './img/air-e.png'
+debugging = on
 
 createWindow = () ->
   win = new BrowserWindow
@@ -27,8 +28,21 @@ createWindow = () ->
   mnutmpl = [
     {
       label: 'File'
-      submenu: [ 
-        label: 'Quit', accelerator: 'Ctrl+Q', click: () -> app.quit()
+      submenu: [
+        {
+            label: 'Debugging'
+            accelerator: 'Ctrl+Shift+I'
+            type: 'checkbox'
+            checked: debugging
+            role: 'toggledevtools'
+            click: () ->
+              debugging = not debugging
+              win.webContents.toggleDevTools()
+        },
+        { type: 'separator' },
+        {
+          label: 'Quit', accelerator: 'Ctrl+Q', click: () -> app.quit()
+        }
       ]
     },
     {
