@@ -77,7 +77,7 @@
               <td>{{ t }}</td>
               <td v-for='si in measurements.stations.length'
                   align='right'>
-                  <span v-bind:class='[paramLevel(parameter, measurements.measurements[si-1].data[i])]'>
+                  <span v-bind:class='[paramLevel(measurements.parameter, measurements.measurements[si-1].data[i])]'>
                 {{ measurements.measurements[si-1].data[i] ? 
                     measurements.measurements[si-1].data[i].toFixed(2) : null }}
                   </span>
