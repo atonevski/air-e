@@ -53,7 +53,6 @@ vue = new Vue
       "#{ ymd }T#{ s[1] }#{ s[2][0..2] }:#{ s[2][3..4] }"
     
     prepareMap: () ->
-      console.log [@center.lat, @center.lng]
       @map = L.map 'map-id'
               .setView [@center.lat, @center.lng], 12
 
@@ -61,6 +60,21 @@ vue = new Vue
       # L.tileLayer 'http://{s}.tile.osm.org/{z}/{x}/{y}.png', {}
       .addTo @map
 
+    retrieveSensors: () ->
+      t = new Date()
+      f = new Date(t - 1*60*60*1000)
+      # id = 1001
+      id = "7c497bfd-36b6-4eed-9172-37fd70f17c48"
+      url = "https://#{ CITY }.pulse.eco/rest/dataRaw?sensorId=#{ id }&type=#{ @parameter }&from=#{ encodeURIComponent(@toDtm f) }&to=#{ encodeURIComponent(@toDtm t) }"
+      console.log url
+      https.get url, (res) =>
+        body = ''
+        res.on 'data', (d) -> body += d
+        res.on 'error', (e) -> console.log "raw data error: #{ e }"
+        res.on 'end', () =>
+          console.log body
+
+  
     addSensorMarkers: () ->
       for s in @sensors
         [lat, lng] = s.position.split(',').map (x) -> parseFloat x
@@ -104,6 +118,6 @@ vue = new Vue
           @addSensorMarkers()
 
   created: () ->
-    console.log encodeURI @toDtm(new Date())
+    @retrieveSensors()
     @prepareMap()
     @getSensors()

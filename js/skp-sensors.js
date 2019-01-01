@@ -58,10 +58,31 @@ vue = new Vue({
       return `${ymd}T${s[1]}${s[2].slice(0, 3)}:${s[2].slice(3, 5)}`;
     },
     prepareMap: function() {
-      console.log([this.center.lat, this.center.lng]);
       this.map = L.map('map-id').setView([this.center.lat, this.center.lng], 12);
       // L.tileLayer 'http://{s}.tile.osm.org/{z}/{x}/{y}.png', {}
       return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(this.map);
+    },
+    retrieveSensors: function() {
+      var f, id, t, url;
+      t = new Date();
+      f = new Date(t - 1 * 60 * 60 * 1000);
+      // id = 1001
+      id = "7c497bfd-36b6-4eed-9172-37fd70f17c48";
+      url = `https://${CITY}.pulse.eco/rest/dataRaw?sensorId=${id}&type=${this.parameter}&from=${encodeURIComponent(this.toDtm(f))}&to=${encodeURIComponent(this.toDtm(t))}`;
+      console.log(url);
+      return https.get(url, (res) => {
+        var body;
+        body = '';
+        res.on('data', function(d) {
+          return body += d;
+        });
+        res.on('error', function(e) {
+          return console.log(`raw data error: ${e}`);
+        });
+        return res.on('end', () => {
+          return console.log(body);
+        });
+      });
     },
     addSensorMarkers: function() {
       var i, lat, len, lng, marker, ref, results, s;
@@ -95,7 +116,7 @@ vue = new Vue({
     }
   },
   created: function() {
-    console.log(encodeURI(this.toDtm(new Date())));
+    this.retrieveSensors();
     this.prepareMap();
     return this.getSensors();
   }
