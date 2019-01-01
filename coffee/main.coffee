@@ -58,6 +58,14 @@ createWindow = () ->
       ]
     },
     {
+      label: 'SK Pulse'
+      submenu: [
+        {
+          label: 'Sensors', click: () -> win.loadFile './views/skp-sensors.html'
+        }
+      ]
+    },
+    {
       label: 'About'
       click: () ->
         dialog.showMessageBox win,

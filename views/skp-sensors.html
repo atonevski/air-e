@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <title>Skopje Pulse: Sensors</title>
+    <link rel="stylesheet" href="../css/bootstrap-solarized-dark.css">
+    <link rel="stylesheet" href="../css/all.css">
+    <link rel="stylesheet" href="../css/leaflet.css">
+    <script src='../js/vue.js'></script>
+    <script src='../js/leaflet.js'></script>
+    <style>
+      #map-id {
+        width: 100%;
+        height: 500px;
+      }
+      .table-smaller-font { font-size: 75%; }
+      th.left { text-align: left; }
+      th.center { text-align: center; }
+      th.right { text-align: right; }
+      td.with-padding { padding: 0px 10px; }type
+    </style>
+  </head>
+  <body class='container'>
+    <div class='pull-right' style='padding: 10px'>
+      <select class='form-control btn-info input-sm'>
+        <option>pm10</option>
+        <option>pm25</option>
+        <option>temperature</option>
+        <option>humidity</option>
+        <option>noise</option>
+      </select>
+    </div>
+    <h3>Skopje Pulse: Sensors</h3>
+    <i class="fas fa-map-marked-alt fa-2x" onclick='toggleMap()'></i>
+    <div id='map-id' v-show='mapVisible'></div>
+    <div id='app'>
+      <div class='table-responsive'>
+        <table class='table table-hover table-condensed table-smaller-font'>
+          <thead>
+            <tr>
+              <th>Id</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Latitude</th>
+              <th>Longitude</th>
+              <th>Comments</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+           <tr v-for='s in sensors'>
+            <td align='center'>{{ s.sensorId }}</td>
+            <td align='left'>{{ s.type }}: {{ sensorType[s.type] }}</td>
+            <td align='left'>{{ s.description }}</td>
+            <td align='right'>{{ s.position.split(',')[0] }}</td>
+            <td align='right'>{{ s.position.split(',')[1] }}</td>
+            <td align='left'>{{ s.comments }}</td>
+            <td align='status'>{{ s.status }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script src='../js/skp-sensors.js'></script>
+  </body>
+</html>
