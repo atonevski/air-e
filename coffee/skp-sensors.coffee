@@ -4,7 +4,6 @@
 
 https = require 'https'
 
-CITY = 'skopje'
 
 mapVisible = no
 
@@ -16,11 +15,18 @@ toggleMap = () ->
   else
     el.style.display = 'none'
 
+parameterChanged = (val) ->
+  console.log "parameter changed to #{ val }"
+  vue.parameter = val
+
 vue = new Vue
   el: '#app'
 
   data:
     parameter: "pm10"
+
+    CITY: 'skopje'
+    UNAMEPW: (new Buffer("atonevski:pv1530kay")).toString 'base64'
 
     center:
       lat: 41.99249998
@@ -60,21 +66,102 @@ vue = new Vue
       # L.tileLayer 'http://{s}.tile.osm.org/{z}/{x}/{y}.png', {}
       .addTo @map
 
-    retrieveSensors: () ->
-      t = new Date()
-      f = new Date(t - 1*60*60*1000)
-      # id = 1001
-      id = "7c497bfd-36b6-4eed-9172-37fd70f17c48"
-      url = "https://#{ CITY }.pulse.eco/rest/dataRaw?sensorId=#{ id }&type=#{ @parameter }&from=#{ encodeURIComponent(@toDtm f) }&to=#{ encodeURIComponent(@toDtm t) }"
-      console.log url
-      https.get url, (res) =>
-        body = ''
-        res.on 'data', (d) -> body += d
-        res.on 'error', (e) -> console.log "raw data error: #{ e }"
-        res.on 'end', () =>
-          console.log body
+#     retrieveSensors: () ->
+#       to    = new Date()
+#       from  = new Date(to - 1*60*60*1000)
+#       opts =
+#         hostname: "#{ @CITY }.pulse.eco"
+#         path: "/rest/dataRaw?sensorId=#{ encodeURIComponent @sensors[1].sensorId }&" +
+#               "type=#{ @parameter }&" +
+#               "from=#{ encodeURIComponent @toDtm(from) }&" +
+#               "to=#{ encodeURIComponent @toDtm(to) }"
+#         port: 443
+#         headers:
+#           Authorization: 'Basic ' + @UNAMEPW
+#       
+#       console.log opts.headers.Authorize
+#       console.log "https://#{ opts.hostname }#{ opts.path }"
+# 
+#       https.get opts, (res) =>
+#         body = ''
+#         res.on 'data', (d) -> body += d
+#         res.on 'error', (e) -> console.log "retrieveSensors(): #{ e }"
+#         res.on 'end', () =>
+#           measurements = JSON.parse body
+#           console.log measurements
 
+    retrieveSensors: () ->
+      for sen in @sensors
+        do (sen) =>
+          to    = new Date()
+          from  = new Date(to - 1*60*60*1000)
+          opts =
+            hostname: "#{ @CITY }.pulse.eco"
+            path: "/rest/dataRaw?sensorId=#{ encodeURIComponent sen.sensorId }&" +
+                  "type=#{ @parameter }&" +
+                  "from=#{ encodeURIComponent @toDtm(from) }&" +
+                  "to=#{ encodeURIComponent @toDtm(to) }"
+            port: 443
+            headers:
+              Authorization: 'Basic ' + @UNAMEPW
+          
+          https.get opts, (res) =>
+            body = ''
+            res.on 'data', (d) => body += d
+            res.on 'error', (e) => console.log "retrieveSensors(): #{ e }"
+            res.on 'end', () =>
+              meas = JSON.parse body
+              return if meas.length is 0
+              lastm = meas[-1..][0]
+              sen.parameter = lastm.type
+              sen.value = lastm.value
+              sen.stamp = lastm.stamp
+              @addSensorMarker sen
   
+    addSensorMarker: (s) -> # singular
+      [lat, lng] = s.position.split(',').map (x) -> parseFloat x
+      marker = L.marker [lat, lng]
+        .addTo @map
+        .bindPopup """
+          <table class='table-smaller-font'>
+            <tbody>
+            <tr>
+              <th class='right'>Id</th>
+              <td class='with-padding'>#{ s.sensorId }</td>
+            </tr>
+            <tr>
+              <th class='right'>Sensor</th>
+              <td class='with-padding'>#{ s.description }</td>
+            </tr>
+            <tr>
+              <th class='right'>Position</th>
+              <td class='with-padding'>#{ s.position }</td>
+            </tr>
+            <tr>
+              <th class='right'>Type</th>
+              <td class='with-padding'>#{ @sensorType[s.type] }</td>
+            </tr>
+            <tr>
+              <th class='right'>Status</th>
+              <td class='with-padding'>#{ s.status }</td>
+            </tr>
+            <tr>
+              <th class='right'>Stamp</th>
+              <td class='with-padding'>#{ s.stamp }</td>
+            </tr>
+            <tr>
+              <th class='right'>Parameter</th>
+              <td class='with-padding'>#{ s.parameter }</td>
+            </tr>
+            <tr>
+              <th class='right'>Value</th>
+              <td class='with-padding'>#{ s.value }</td>
+            </tr>
+            </tbody>
+          </table>
+        """
+        .on 'click', (e) => this.openPopup
+
     addSensorMarkers: () ->
       for s in @sensors
         [lat, lng] = s.position.split(',').map (x) -> parseFloat x
@@ -103,21 +190,48 @@ vue = new Vue
                 <th class='right'>Status</th>
                 <td class='with-padding'>#{ s.status }</td>
               </tr>
+              <tr>
+                <th class='right'>Stamp</th>
+                <td class='with-padding'>#{ s.stamp }</td>
+              </tr>
+              <tr>
+                <th class='right'>Parameter</th>
+                <td class='with-padding'>#{ s.parameter }</td>
+              </tr>
+              <tr>
+                <th class='right'>Value</th>
+                <td class='with-padding'>#{ s.value }</td>
+              </tr>
               </tbody>
             </table>
           """
           .on 'click', (e) => this.openPopup
 
     getSensors: () ->
-      url = "https://#{ CITY }.pulse.eco/rest/sensor"
-      https.get url, (res) =>
+      opts =
+        hostname: "#{ @CITY }.pulse.eco"
+        port: 443
+        path:  '/rest/sensor'
+        headers:
+          Authorization: 'Basic ' + @UNAMEPW
+
+      https.get opts, (res) =>
         body = ''
         res.on 'data', (d) -> body += d
+        res.on 'error', (e) -> console.log "getSensors(): #{ e }"
         res.on 'end', () =>
           @sensors = JSON.parse body
-          @addSensorMarkers()
+          @retrieveSensors()
+          # @addSensorMarkers()
 
   created: () ->
-    @retrieveSensors()
     @prepareMap()
     @getSensors()
+
+# https://skopje.pulse.eco/rest/dataRaw?sensorId=7c497bfd-36b6-4eed-9172-37fd70f17c48&type=pm10&from=2019-01-03T06%3A12%3A33%2B01%3A00&to=2019-01-03T07%3A12%3A33%2B01%3A00
+
+# skopje.pulse.eco
+# name: sk-pulse
+# email: atonevski@gmail.com
+# username: atonevski
+# password: pv1530kay

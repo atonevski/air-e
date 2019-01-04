@@ -2,11 +2,9 @@
 // skp-sensors.coffee:
 // - list all sonsors from sk pulse
 
-var CITY, https, mapVisible, toggleMap, vue;
+var https, mapVisible, parameterChanged, toggleMap, vue;
 
 https = require('https');
-
-CITY = 'skopje';
 
 mapVisible = false;
 
@@ -21,10 +19,17 @@ toggleMap = function() {
   }
 };
 
+parameterChanged = function(val) {
+  console.log(`parameter changed to ${val}`);
+  return vue.parameter = val;
+};
+
 vue = new Vue({
   el: '#app',
   data: {
     parameter: "pm10",
+    CITY: 'skopje',
+    UNAMEPW: (new Buffer("atonevski:pv1530kay")).toString('base64'),
     center: {
       lat: 41.99249998,
       lng: 21.42361109
@@ -62,26 +67,80 @@ vue = new Vue({
       // L.tileLayer 'http://{s}.tile.osm.org/{z}/{x}/{y}.png', {}
       return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(this.map);
     },
+    //     retrieveSensors: () ->
+    //       to    = new Date()
+    //       from  = new Date(to - 1*60*60*1000)
+    //       opts =
+    //         hostname: "#{ @CITY }.pulse.eco"
+    //         path: "/rest/dataRaw?sensorId=#{ encodeURIComponent @sensors[1].sensorId }&" +
+    //               "type=#{ @parameter }&" +
+    //               "from=#{ encodeURIComponent @toDtm(from) }&" +
+    //               "to=#{ encodeURIComponent @toDtm(to) }"
+    //         port: 443
+    //         headers:
+    //           Authorization: 'Basic ' + @UNAMEPW
+
+    //       console.log opts.headers.Authorize
+    //       console.log "https://#{ opts.hostname }#{ opts.path }"
+
+    //       https.get opts, (res) =>
+    //         body = ''
+    //         res.on 'data', (d) -> body += d
+    //         res.on 'error', (e) -> console.log "retrieveSensors(): #{ e }"
+    //         res.on 'end', () =>
+    //           measurements = JSON.parse body
+    //           console.log measurements
     retrieveSensors: function() {
-      var f, id, t, url;
-      t = new Date();
-      f = new Date(t - 1 * 60 * 60 * 1000);
-      // id = 1001
-      id = "7c497bfd-36b6-4eed-9172-37fd70f17c48";
-      url = `https://${CITY}.pulse.eco/rest/dataRaw?sensorId=${id}&type=${this.parameter}&from=${encodeURIComponent(this.toDtm(f))}&to=${encodeURIComponent(this.toDtm(t))}`;
-      console.log(url);
-      return https.get(url, (res) => {
-        var body;
-        body = '';
-        res.on('data', function(d) {
-          return body += d;
-        });
-        res.on('error', function(e) {
-          return console.log(`raw data error: ${e}`);
-        });
-        return res.on('end', () => {
-          return console.log(body);
-        });
+      var i, len, ref, results, sen;
+      ref = this.sensors;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        sen = ref[i];
+        results.push(((sen) => {
+          var from, opts, to;
+          to = new Date();
+          from = new Date(to - 1 * 60 * 60 * 1000);
+          opts = {
+            hostname: `${this.CITY}.pulse.eco`,
+            path: `/rest/dataRaw?sensorId=${encodeURIComponent(sen.sensorId)}&` + `type=${this.parameter}&` + `from=${encodeURIComponent(this.toDtm(from))}&` + `to=${encodeURIComponent(this.toDtm(to))}`,
+            port: 443,
+            headers: {
+              Authorization: 'Basic ' + this.UNAMEPW
+            }
+          };
+          return https.get(opts, (res) => {
+            var body;
+            body = '';
+            res.on('data', (d) => {
+              return body += d;
+            });
+            res.on('error', (e) => {
+              return console.log(`retrieveSensors(): ${e}`);
+            });
+            return res.on('end', () => {
+              var lastm, meas;
+              meas = JSON.parse(body);
+              if (meas.length === 0) {
+                return;
+              }
+              lastm = meas.slice(-1)[0];
+              sen.parameter = lastm.type;
+              sen.value = lastm.value;
+              sen.stamp = lastm.stamp;
+              return this.addSensorMarker(sen);
+            });
+          });
+        })(sen));
+      }
+      return results;
+    },
+    addSensorMarker: function(s) { // singular
+      var lat, lng, marker;
+      [lat, lng] = s.position.split(',').map(function(x) {
+        return parseFloat(x);
+      });
+      return marker = L.marker([lat, lng]).addTo(this.map).bindPopup(`<table class='table-smaller-font'>\n  <tbody>\n  <tr>\n    <th class='right'>Id</th>\n    <td class='with-padding'>${s.sensorId}</td>\n  </tr>\n  <tr>\n    <th class='right'>Sensor</th>\n    <td class='with-padding'>${s.description}</td>\n  </tr>\n  <tr>\n    <th class='right'>Position</th>\n    <td class='with-padding'>${s.position}</td>\n  </tr>\n  <tr>\n    <th class='right'>Type</th>\n    <td class='with-padding'>${this.sensorType[s.type]}</td>\n  </tr>\n  <tr>\n    <th class='right'>Status</th>\n    <td class='with-padding'>${s.status}</td>\n  </tr>\n  <tr>\n    <th class='right'>Stamp</th>\n    <td class='with-padding'>${s.stamp}</td>\n  </tr>\n  <tr>\n    <th class='right'>Parameter</th>\n    <td class='with-padding'>${s.parameter}</td>\n  </tr>\n  <tr>\n    <th class='right'>Value</th>\n    <td class='with-padding'>${s.value}</td>\n  </tr>\n  </tbody>\n</table>`).on('click', (e) => {
+        return this.openPopup;
       });
     },
     addSensorMarkers: function() {
@@ -93,31 +152,49 @@ vue = new Vue({
         [lat, lng] = s.position.split(',').map(function(x) {
           return parseFloat(x);
         });
-        results.push(marker = L.marker([lat, lng]).addTo(this.map).bindPopup(`<table class='table-smaller-font'>\n  <tbody>\n  <tr>\n    <th class='right'>Id</th>\n    <td class='with-padding'>${s.sensorId}</td>\n  </tr>\n  <tr>\n    <th class='right'>Sensor</th>\n    <td class='with-padding'>${s.description}</td>\n  </tr>\n  <tr>\n    <th class='right'>Position</th>\n    <td class='with-padding'>${s.position}</td>\n  </tr>\n  <tr>\n    <th class='right'>Type</th>\n    <td class='with-padding'>${this.sensorType[s.type]}</td>\n  </tr>\n  <tr>\n    <th class='right'>Status</th>\n    <td class='with-padding'>${s.status}</td>\n  </tr>\n  </tbody>\n</table>`).on('click', (e) => {
+        results.push(marker = L.marker([lat, lng]).addTo(this.map).bindPopup(`<table class='table-smaller-font'>\n  <tbody>\n  <tr>\n    <th class='right'>Id</th>\n    <td class='with-padding'>${s.sensorId}</td>\n  </tr>\n  <tr>\n    <th class='right'>Sensor</th>\n    <td class='with-padding'>${s.description}</td>\n  </tr>\n  <tr>\n    <th class='right'>Position</th>\n    <td class='with-padding'>${s.position}</td>\n  </tr>\n  <tr>\n    <th class='right'>Type</th>\n    <td class='with-padding'>${this.sensorType[s.type]}</td>\n  </tr>\n  <tr>\n    <th class='right'>Status</th>\n    <td class='with-padding'>${s.status}</td>\n  </tr>\n  <tr>\n    <th class='right'>Stamp</th>\n    <td class='with-padding'>${s.stamp}</td>\n  </tr>\n  <tr>\n    <th class='right'>Parameter</th>\n    <td class='with-padding'>${s.parameter}</td>\n  </tr>\n  <tr>\n    <th class='right'>Value</th>\n    <td class='with-padding'>${s.value}</td>\n  </tr>\n  </tbody>\n</table>`).on('click', (e) => {
           return this.openPopup;
         }));
       }
       return results;
     },
     getSensors: function() {
-      var url;
-      url = `https://${CITY}.pulse.eco/rest/sensor`;
-      return https.get(url, (res) => {
+      var opts;
+      opts = {
+        hostname: `${this.CITY}.pulse.eco`,
+        port: 443,
+        path: '/rest/sensor',
+        headers: {
+          Authorization: 'Basic ' + this.UNAMEPW
+        }
+      };
+      return https.get(opts, (res) => {
         var body;
         body = '';
         res.on('data', function(d) {
           return body += d;
         });
+        res.on('error', function(e) {
+          return console.log(`getSensors(): ${e}`);
+        });
         return res.on('end', () => {
           this.sensors = JSON.parse(body);
-          return this.addSensorMarkers();
+          return this.retrieveSensors();
         });
       });
     }
   },
+  // @addSensorMarkers()
   created: function() {
-    this.retrieveSensors();
     this.prepareMap();
     return this.getSensors();
   }
 });
+
+// https://skopje.pulse.eco/rest/dataRaw?sensorId=7c497bfd-36b6-4eed-9172-37fd70f17c48&type=pm10&from=2019-01-03T06%3A12%3A33%2B01%3A00&to=2019-01-03T07%3A12%3A33%2B01%3A00
+
+// skopje.pulse.eco
+// name: sk-pulse
+// email: atonevski@gmail.com
+// username: atonevski
+// password: pv1530kay
